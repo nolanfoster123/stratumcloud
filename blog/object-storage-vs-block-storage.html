@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>
+         Object Storage vs Block Storage for Databases, Backups and AI | Stratum Cloud
+      </title>
+      <meta
+         name="description"
+         content="Compare object and block storage for databases, backups and AI. Learn how access patterns, latency, recovery needs and total cost shape the right architecture."
+      />
+      <meta name="theme-color" content="#2355e8" />
+      <meta
+         property="og:title"
+         content="Object Storage vs Block Storage for Databases, Backups and AI | Stratum Cloud"
+      />
+      <meta
+         property="og:description"
+         content="Compare object and block storage for databases, backups and AI. Learn how access patterns, latency, recovery needs and total cost shape the right architecture."
+      />
+      <meta property="og:type" content="article" />
+      <link
+         rel="icon"
+         type="image/svg+xml"
+         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232355e8'/%3E%3Cpath d='M7 10h18M7 16h18M7 22h18' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
+      />
+      <link rel="stylesheet" href="../style.css" />
+      <script defer src="../app.js"></script>
+   </head>
+   <body class="page-blog-post">
+      <a class="skip" href="#main">Skip to content</a>
+      <div class="announcement">
+         <span>THE INFRASTRUCTURE JOURNAL</span> A practical guide to production
+         AI. <a href="../blog-post.html">Read the guide ↗</a>
+      </div>
+      <header>
+         <div class="wrap nav">
+            <a class="brand" href="../index.html" aria-label="Stratum Cloud home"
+               ><span class="mark" aria-hidden="true"
+                  ><i></i><i></i><i></i></span
+               >stratum<small>CLOUD</small></a
+            ><button
+               class="menu"
+               aria-expanded="false"
+               aria-controls="navigation"
+            >
+               Menu
+            </button>
+            <nav id="navigation" aria-label="Main navigation">
+               <a href="../index.html">Home</a
+               ><a href="../index.html#platform">Platform</a
+               ><a href="../about.html">About us</a><a href="../blog.html">Insights</a
+               ><a href="../calculator.html">Calculator</a>
+            </nav>
+            <a href="../calculator.html" class="btn">Plan your cloud ↗</a>
+         </div>
+      </header>
+      <main id="main">
+         <section class="page-hero">
+            <div class="wrap article-head">
+               <p class="eyebrow">
+                  <a href="../blog.html">Insights</a> / Storage architecture
+               </p>
+               <h1>Object Storage vs Block Storage for Databases, Backups and AI</h1>
+               <p class="lead">A database volume, a backup repository and an AI dataset need different things from storage. Plan them accordingly.</p>
+               <p class="meta">Stratum Editorial · September 23, 2026 · 9 min read</p>
+            </div>
+         </section>
+         <section class="section">
+            <div class="wrap article-grid">
+               <aside class="toc"><p class="eyebrow">In this guide</p><a href="#difference">The core difference</a><a href="#comparison">Side-by-side comparison</a><a href="#databases">Database storage</a><a href="#backups">Backups and recovery</a><a href="#ai">AI datasets and checkpoints</a><a href="#architecture">Using both together</a><a href="#cost">Cost and performance</a><a href="#mistakes">Common mistakes</a><a href="#checklist">Selection checklist</a><a href="#conclusion">Final recommendation</a></aside>
+               <article class="prose">
+<div class="answer"><strong>The quick answer</strong><p>Block storage usually suits active database files and workloads needing frequent, low-latency updates. Object storage suits backups, application files, AI datasets and model artifacts accessed through APIs. Many production systems need both. Choose by access pattern, required performance, recovery objectives and full cost, rather than assuming one storage type is universally faster, cheaper or safer.</p></div>
+<p>A database waits for writes to finish. A backup job needs somewhere durable to keep recovery copies. An AI training job needs enough data arriving to keep expensive GPUs busy. All three consume storage, but buying the same kind for every task can create avoidable cost and performance problems.</p>
+<p>The object storage vs block storage decision becomes clearer when the question changes from how much data exists to how the application uses it. For Indian businesses building production systems, the right design often combines both, with explicit choices about data location, access and restoration.</p>
+<h2 id="difference">The core difference is how applications access data</h2>
+<h3>Block storage behaves like a disk</h3>
+<p>A block volume exposes addressable storage to a server. The operating system can place a filesystem on it, and applications can read or update portions of files. This suits software designed to work with disk paths and frequent changes to existing data.</p>
+<p>The application may see an ordinary disk even when the cloud service delivers it over a network. Its performance depends on the volume configuration, the instance’s limits and the underlying storage system. A large volume is not automatically a fast one.</p>
+<h3>Object storage exposes objects through an API</h3>
+<p>Object storage keeps data under keys in buckets, with associated metadata. Applications typically upload, retrieve or replace objects through HTTP APIs, often using S3-compatible clients. It suits a large collection of files that can be accessed independently.</p>
+<p>Many services support partial reads and multipart uploads, but ordinary object APIs are not equivalent to a disk’s in-place write interface. An application designed around filesystem locking and small random writes may need adaptation.</p>
+<p>A third option, shared file storage, matters when multiple machines require a common filesystem with supported file semantics. That requirement should not be forced into an object-versus-block choice.</p>
+<h2 id="comparison">Object storage vs block storage at a glance</h2>
+<div class="table-wrap"><table><thead><tr><th>Decision factor</th><th>Object storage</th><th>Block storage</th></tr></thead><tbody>
+<tr><td>Access method</td><td>Bucket and object APIs</td><td>Attached volume, usually with a filesystem</td></tr>
+<tr><td>Typical access pattern</td><td>Upload, retrieve and replace objects</td><td>Frequent reads and updates within files</td></tr>
+<tr><td>Common workloads</td><td>Backups, media, datasets and model artifacts</td><td>Database files, application volumes and working data</td></tr>
+<tr><td>Sharing</td><td>Multiple authorized clients can access objects</td><td>Concurrent attachment requires explicit service and software support</td></tr>
+<tr><td>Performance measures</td><td>Request latency, aggregate throughput and request rate</td><td>IOPS, latency and throughput at the required I/O size</td></tr>
+<tr><td>Cost dimensions</td><td>Stored bytes, requests, transfer and storage-class rules</td><td>Provisioned capacity, performance and protection features</td></tr>
+<tr><td>Recovery planning</td><td>Restore objects and reconstruct application state</td><td>Restore or attach volumes and recover the application</td></tr>
+</tbody></table></div>
+<p>These are typical patterns, not universal performance rankings. Neither interface alone establishes durability, availability or recovery time. Those depend on the particular service and its configuration.</p>
+<h2 id="databases">For active databases, begin with the database engine</h2>
+<p>Conventional PostgreSQL and MySQL deployments generally expect storage that supports their filesystem and durability requirements. Active data files and transaction logs are therefore commonly placed on persistent block volumes or another explicitly supported storage system.</p>
+<p>Database writes are not only a capacity problem. A transaction may wait for a log flush, while a query may issue many small reads. Consistent latency can matter more than impressive sequential throughput.</p>
+<p>When evaluating <a href="https://acecloud.ai/cloud/storage/block/">AceCloud Block Storage</a>, for example, a database team should ask about the intended volume’s IOPS, throughput, latency and instance limits. Those requirements should come from a representative database test rather than the volume size alone.</p>
+<h3>Measure storage before adding more compute</h3>
+<p>A slow query can result from missing indexes, insufficient cache, lock contention or storage waits. Increasing vCPU count will not reliably fix all of those problems. Review query plans and database wait events alongside disk metrics.</p>
+<p>Testing should include normal traffic, peak concurrency and background activity such as checkpoints and backups. A volume that performs well during an isolated read benchmark may behave differently when reads and writes compete.</p>
+<p>Object storage still has an important database role. It can hold backups, exported tables and archived transaction logs. Some analytical databases also use object storage as a primary data layer by design. That is an architectural capability of those systems, not evidence that any database directory can be moved into a bucket.</p>
+<h2 id="backups">For backups, choose around the restore</h2>
+<p>Object storage is a useful repository for backup files because multiple systems can write recovery copies through supported backup tools. Lifecycle and retention capabilities can help manage a growing history, where available and correctly configured.</p>
+<p>However, successful uploads do not prove recoverability. A usable backup also needs consistency, the required metadata or logs, accessible encryption keys and a tested restoration procedure.</p>
+<p>PostgreSQL’s <a href="https://www.postgresql.org/docs/17/continuous-archiving.html">continuous archiving documentation</a> explains the relationship between a base backup and the WAL records needed for point-in-time recovery. Missing part of that chain can prevent recovery to the intended point. Retention rules must preserve the required dependencies together.</p>
+<h3>Snapshots and backups serve different recovery designs</h3>
+<p>A volume snapshot can support fast recovery, depending on the service. But a snapshot taken without suitable application coordination may be crash-consistent rather than application-consistent. The database must be able to recover from the captured state.</p>
+<p>Also consider the failure boundary. A recovery copy reachable through the same compromised account may not provide the isolation the business expects. Separate permissions and appropriately configured immutable retention can strengthen the design, where supported.</p>
+<p>Define how much data loss is acceptable and how quickly service must return. Then run a restore large enough to expose real transfer and recovery times. A small test file is not a substitute for restoring a production-sized database.</p>
+<h2 id="ai">AI workloads usually benefit from more than one storage layer</h2>
+<p>AI teams often need a durable repository for source datasets and model artifacts, plus faster working storage near the compute that consumes them. Those are different jobs.</p>
+<p>A service such as <a href="https://acecloud.ai/cloud/storage/object/">AceCloud Object Storage</a> can be evaluated for the repository role through its S3-compatible interface. The trial should measure the actual dataset layout, download patterns and connection to the intended compute region.</p>
+<h3>Training datasets</h3>
+<p>Millions of small files can create request and metadata overhead. Grouping samples into suitable shards may improve loading efficiency, provided the format still supports the training pipeline’s sampling and shuffle requirements.</p>
+<p>Some pipelines stream efficiently from object storage. Others benefit from staging frequently reused data on a block volume, local SSD or shared high-performance filesystem. The decision should follow measured loading time, reuse and capacity requirements.</p>
+<h3>Model checkpoints</h3>
+<p>Checkpoints can create bursts of writes and interrupt progress if saving takes too long. A pipeline may write to nearby working storage first and then transfer the completed checkpoint to durable storage. It must track when the durable copy is actually complete.</p>
+<p>If the working copy is lost before transfer finishes, the latest checkpoint may be unavailable. A faster save path therefore does not remove the need for a clear recovery policy.</p>
+<h3>Inference and model loading</h3>
+<p>An inference server may download model weights at startup and retain them on a local cache or persistent volume. Repeatedly starting new replicas can multiply transfer traffic and delay capacity becoming ready.</p>
+<p>Benchmark cold starts separately from steady-state inference. Storage influences model loading, but slow GPU utilization can also come from CPU preprocessing or the data loader. PyTorch’s <a href="https://docs.pytorch.org/tutorials/recipes/recipes/tuning_guide">performance tuning guidance</a> highlights data-loading choices that should be examined alongside the storage service.</p>
+<h2 id="architecture">A practical application can use both</h2>
+<p>Consider an illustrative SaaS product that stores customer documents and runs an AI assistant. Its storage layout could separate responsibilities as follows.</p>
+<div class="table-wrap"><table><thead><tr><th>Application component</th><th>Starting storage choice</th><th>Reason</th></tr></thead><tbody>
+<tr><td>Transactional database</td><td>Persistent block storage</td><td>Supports the database’s active read and write pattern</td></tr>
+<tr><td>Customer documents</td><td>Object storage</td><td>Stores individually retrievable files through an API</td></tr>
+<tr><td>Database backup repository</td><td>Object storage</td><td>Keeps recovery files under a defined retention policy</td></tr>
+<tr><td>Model artifacts</td><td>Object storage</td><td>Provides a durable source for deployment downloads</td></tr>
+<tr><td>Model cache or working dataset</td><td>Block storage or local SSD</td><td>Can reduce repeated remote reads where appropriate</td></tr>
+</tbody></table></div>
+<p>This is a starting architecture, not a mandatory pattern. Local SSD may be ephemeral, shared file storage may be necessary, and managed databases may hide their underlying volumes. Each component needs its own persistence and recovery decision.</p>
+<h2 id="cost">Compare useful performance and complete cost</h2>
+<p>For block storage, evaluate IOPS, throughput and latency together. As an illustration, 10,000 operations per second at 4 KiB each represent about 39 MiB/s of payload. The same IOPS figure with a different I/O size implies a different throughput requirement. Real results are constrained by both storage and instance limits.</p>
+<p>For object storage, record object sizes, request volume, concurrency and bytes transferred. A backup repository read only during recovery behaves differently from a media library downloaded continuously, even if both hold the same capacity.</p>
+<ul><li><strong>Block storage estimate</strong><br>Include provisioned capacity, performance charges where applicable, snapshots, backups and transfer.</li>
+<li><strong>Object storage estimate</strong><br>Include stored data, old versions, requests, retrieval, transfer and minimum-retention charges where applicable.</li>
+<li><strong>Application estimate</strong><br>Include compute time lost waiting for data and the cost of duplicate working copies.</li></ul>
+<p>For Indian deployments, compare quotes in a common currency and tax basis. Confirm the locations of primary storage, backups and any replicas. A provider’s Indian presence alone does not establish the location of every configured copy.</p>
+<h2 id="mistakes">Four shortcuts that lead to storage problems</h2>
+<h3>Treating a bucket mount as a normal disk</h3>
+<p>A filesystem adapter can make objects appear under a directory, but application semantics, caching and failure behavior may differ. Database use requires explicit support and validation.</p>
+<h3>Assuming a shared volume supports concurrent writers</h3>
+<p>Even when a provider permits multiple attachments, the filesystem and application must coordinate access safely. Attaching an ordinary filesystem to several writers can corrupt data.</p>
+<h3>Calling replication a backup</h3>
+<p>Replication can improve availability, but it may also propagate unwanted changes or deletions. Recovery requires retained, usable states and a way to restore them.</p>
+<h3>Selecting the cheapest tier without testing retrieval</h3>
+<p>An archive tier may introduce restore delays or additional charges. It should match the business’s recovery and access requirements, including an unexpected large restore.</p>
+<h2 id="checklist">A selection checklist for the infrastructure team</h2>
+<ul><li>Identify whether the application requires a disk, a shared filesystem or an object API.</li>
+<li>Measure read and write sizes, concurrency and expected data growth.</li>
+<li>Set latency and throughput targets at the application level.</li>
+<li>Define recovery time, acceptable data loss and retention requirements.</li>
+<li>Confirm access controls, encryption-key ownership and storage locations.</li>
+<li>Benchmark a representative workload and restore a representative backup.</li>
+<li>Compare complete monthly costs using the same assumptions.</li></ul>
+<h2 id="conclusion">Give each workload the storage it needs</h2>
+<p>Block storage is a practical starting point for active database files and disk-oriented applications. Object storage is a strong fit for independently accessed files, backups, datasets and model artifacts. Production systems often need both.</p>
+<p>For teams evaluating AceCloud, the useful conversation is how its block and object storage options fit the application’s data path, location requirements and recovery plan. Choose from measured behavior and a complete quote. The best storage design keeps the application responsive today and its data recoverable when something goes wrong.</p>
+</article>
+            </div>
+         </section>
+         <section class="section">
+            <div class="wrap callout">
+               <div>
+                  <p class="eyebrow">YOUR NEXT CHAPTER STARTS HERE</p>
+                  <h2>A clearer plan.<br />A stronger cloud.</h2>
+                  <p>
+                     Start with the resources you need. See how the costs add
+                     up.
+                  </p>
+               </div>
+               <a class="btn" href="../calculator.html">Estimate your costs ↗</a>
+            </div>
+         </section>
+      </main>
+      <footer>
+         <div class="wrap">
+            <div class="footer-grid">
+               <div>
+                  <a
+                     class="brand"
+                     href="../index.html"
+                     aria-label="Stratum Cloud home"
+                     ><span class="mark" aria-hidden="true"
+                        ><i></i><i></i><i></i></span
+                     >stratum<small>CLOUD</small></a
+                  >
+                  <p>
+                     Infrastructure for the applications you’re building next.
+                     From the first deployment to the next stage of growth.
+                  </p>
+               </div>
+               <div>
+                  <h3>Explore the platform</h3>
+                  <a href="../index.html#gpu">Cloud GPUs</a
+                  ><a href="../index.html#storage">Cloud storage</a
+                  ><a href="../index.html#kubernetes">Kubernetes</a
+                  ><a href="../index.html#database">Databases</a
+                  ><a href="../index.html#migration">Cloud migration</a>
+               </div>
+               <div>
+                  <h3>Get to know Stratum</h3>
+                  <a href="../about.html">About us</a
+                  ><a href="../blog.html">Infrastructure insights</a
+                  ><a href="../calculator.html">Cost calculator</a>
+               </div>
+            </div>
+            <div class="footer-bottom">
+               <span
+                  >© 2026 Stratum Cloud. A cloud provider website
+                  concept.</span
+               ><span
+                  >Example brand and rates. No services are sold on this
+                  site.</span
+               >
+            </div>
+         </div>
+      </footer>
+   </body>
+</html>
